@@ -13,6 +13,11 @@ resource spoke2vnet 'Microsoft.Network/virtualNetworks@2022-01-01' existing = {
   scope: resourceGroup('wth-rg-spoke2')
 }
 
+resource spoke3vnet 'Microsoft.Network/virtualNetworks@2022-01-01' existing = {
+  name: 'wth-vnet-spoke301'
+  scope: resourceGroup('wth-rg-spoke3')
+}
+
 resource hubtospoke1 'Microsoft.Network/virtualNetworks/virtualNetworkPeerings@2022-01-01' = {
   name: '${hubvnet.name}/wth-peering-hubtospoke1'
   properties: {
@@ -35,6 +40,19 @@ resource hubtospoke2 'Microsoft.Network/virtualNetworks/virtualNetworkPeerings@2
     useRemoteGateways: false
     remoteVirtualNetwork: {
       id: spoke2vnet.id
+    }
+  }
+}
+
+resource hubtospoke3 'Microsoft.Network/virtualNetworks/virtualNetworkPeerings@2022-01-01' = {
+  name: '${hubvnet.name}/wth-peering-hubtospoke3'
+  properties: {
+    allowGatewayTransit: true
+    allowForwardedTraffic: true
+    allowVirtualNetworkAccess: true
+    useRemoteGateways: false
+    remoteVirtualNetwork: {
+      id: spoke3vnet.id
     }
   }
 }

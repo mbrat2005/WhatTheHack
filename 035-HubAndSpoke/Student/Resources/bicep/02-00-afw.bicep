@@ -130,6 +130,14 @@ resource rtvnetgw 'Microsoft.Network/routeTables@2022-01-01' = {
         }
       }
       {
+        name: 'route-spoke3-to-afw'
+        properties: {
+          addressPrefix: '10.3.0.0/16'
+          nextHopType: 'VirtualAppliance'
+          nextHopIpAddress: wthafw.properties.ipConfigurations[0].properties.privateIPAddress
+        }
+      }
+      {
         name: 'route-hubvm-to-afw'
         properties: {
           addressPrefix: '10.0.10.0/24'

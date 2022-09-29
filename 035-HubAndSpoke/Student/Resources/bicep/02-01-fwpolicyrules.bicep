@@ -23,6 +23,11 @@ resource wthspoke2vmnic 'Microsoft.Network/networkInterfaces@2022-01-01' existin
   scope: resourceGroup('wth-rg-spoke2')
 }
 
+resource wthspoke3vmnic 'Microsoft.Network/networkInterfaces@2022-01-01' existing = {
+  name: 'wth-nic-spoke3vm01'
+  scope: resourceGroup('wth-rg-spoke3')
+}
+
 resource wthafwrcgdnat 'Microsoft.Network/firewallPolicies/ruleCollectionGroups@2022-01-01' = {
   name: '${wthafwpolicy.name}/WTH_DNATRulesCollectionGroup'
   properties: {
@@ -75,7 +80,7 @@ resource wthafwrcgdnat 'Microsoft.Network/firewallPolicies/ruleCollectionGroups@
             translatedPort: '80'
           }
           {
-            name: 'dnat-tcp8082-to-spoke1-80'
+            name: 'dnat-tcp8082-to-spoke2-80'
             ruleType: 'NatRule'
             description: 'DNAT port 8082 to Spoke2'
             destinationAddresses: [
@@ -91,6 +96,25 @@ resource wthafwrcgdnat 'Microsoft.Network/firewallPolicies/ruleCollectionGroups@
               '*'
             ]
             translatedAddress: wthspoke2vmnic.properties.ipConfigurations[0].properties.privateIPAddress
+            translatedPort: '80'
+          }
+          {
+            name: 'dnat-tcp8083-to-spoke3-80'
+            ruleType: 'NatRule'
+            description: 'DNAT port 8082 to Spoke3'
+            destinationAddresses: [
+              wthafwpip01.properties.ipAddress
+            ]
+            destinationPorts: [
+              '8082'
+            ]
+            ipProtocols: [
+              'tcp'
+            ]
+            sourceAddresses: [
+              '*'
+            ]
+            translatedAddress: wthspoke3vmnic.properties.ipConfigurations[0].properties.privateIPAddress
             translatedPort: '80'
           }
         ]
@@ -142,7 +166,7 @@ resource wthafwrcgdnat 'Microsoft.Network/firewallPolicies/ruleCollectionGroups@
             translatedPort: '33899'
           }
           {
-            name: 'dnat-tcp33892-to-spoke1-33899'
+            name: 'dnat-tcp33892-to-spoke2-33899'
             ruleType: 'NatRule'
             description: 'DNAT port 33892 to Spoke2'
             destinationAddresses: [
@@ -158,6 +182,25 @@ resource wthafwrcgdnat 'Microsoft.Network/firewallPolicies/ruleCollectionGroups@
               '*'
             ]
             translatedAddress: wthspoke2vmnic.properties.ipConfigurations[0].properties.privateIPAddress
+            translatedPort: '33899'
+          }
+          {
+            name: 'dnat-tcp33893-to-spoke3-33899'
+            ruleType: 'NatRule'
+            description: 'DNAT port 33892 to Spoke3'
+            destinationAddresses: [
+              wthafwpip01.properties.ipAddress
+            ]
+            destinationPorts: [
+              '33893'
+            ]
+            ipProtocols: [
+              'tcp'
+            ]
+            sourceAddresses: [
+              '*'
+            ]
+            translatedAddress: wthspoke3vmnic.properties.ipConfigurations[0].properties.privateIPAddress
             translatedPort: '33899'
           }
         ]

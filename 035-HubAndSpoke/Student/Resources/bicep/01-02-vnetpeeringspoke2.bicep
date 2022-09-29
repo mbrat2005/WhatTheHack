@@ -3,11 +3,6 @@ resource hubvnet 'Microsoft.Network/virtualNetworks@2022-01-01' existing = {
   scope: resourceGroup('wth-rg-hub')
 }
 
-resource spoke1vnet 'Microsoft.Network/virtualNetworks@2022-01-01' existing = {
-  name: 'wth-vnet-spoke101'
-  scope: resourceGroup('wth-rg-spoke1')
-}
-
 resource spoke2vnet 'Microsoft.Network/virtualNetworks@2022-01-01' existing = {
   name: 'wth-vnet-spoke201'
   scope: resourceGroup('wth-rg-spoke2')

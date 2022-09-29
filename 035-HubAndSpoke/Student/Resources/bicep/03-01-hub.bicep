@@ -27,10 +27,18 @@ resource rthubvms 'Microsoft.Network/routeTables@2022-01-01' = {
           nextHopIpAddress: wthafw.properties.ipConfigurations[0].properties.privateIPAddress
         }
       }
-            {
+      {
         name: 'route-spoke2-to-afw'
         properties: {
           addressPrefix: '10.2.0.0/16'
+          nextHopType: 'VirtualAppliance'
+          nextHopIpAddress: wthafw.properties.ipConfigurations[0].properties.privateIPAddress
+        }
+      }
+      {
+        name: 'route-spoke3-to-afw'
+        properties: {
+          addressPrefix: '10.3.0.0/16'
           nextHopType: 'VirtualAppliance'
           nextHopIpAddress: wthafw.properties.ipConfigurations[0].properties.privateIPAddress
         }
