@@ -4,9 +4,19 @@ param hubVMUsername string = 'admin-wth'
 param vmPassword string
 
 targetScope = 'resourceGroup'
+
+resource wthonpremvmpip01 'Microsoft.Network/publicIPAddresses@2022-01-01' existing = {
+  name: 'wth-pip-onpremvm01'
+  scope: resourceGroup('wth-rg-onprem') 
+}
+
+resource wthonpremvmnic 'Microsoft.Network/networkInterfaces@2022-01-01' existing = {
+  name: 'wth-nic-onpremvm01'
+  scope: resourceGroup('wth-rg-onprem')
+}
 //hub resources
 
-resource wthhubvnet 'Microsoft.Network/virtualNetworks@2021-08-01' = {
+/* resource wthhubvnet 'Microsoft.Network/virtualNetworks@2021-08-01' = {
   name: 'wth-vnet-hub01'
   location: location
   properties: {
@@ -45,6 +55,48 @@ resource wthhubvnet 'Microsoft.Network/virtualNetworks@2021-08-01' = {
       }
     ]
   }
+} */
+
+resource virtualwans 'Microsoft.Network/virtualWans@2022-05-01' = {
+  name: 'wth-vwan-hub02'
+  location: location
+  properties: {
+    disableVpnEncryption: false
+    allowBranchToBranchTraffic: true
+    allowVnetToVnetTraffic: true
+    type: 'Standard'
+  }
+}
+
+resource virtualhub 'Microsoft.Network/virtualHubs@2022-05-01' = {
+  name: 'wth-vhub-hub02'
+  location: location
+  properties: {
+    virtualWan: {
+      id: virtualwans.id
+    }
+    addressPrefix: '10.0.0.0/16'
+  }
+}
+
+resource vpnsites 'Microsoft.Network/vpnSites@2022-05-01' = {
+  name: 'wth-vpnsite-hub02'
+  location: location
+  properties: {
+    virtualWan: {
+      id: virtualwans.id
+    }
+    addressSpace: {
+      addressPrefixes: [
+        '172.16.0.0/16'
+      ]
+    }
+    bgpProperties: {
+      asn: 65510
+      bgpPeeringAddress: wthonpremvmnic.properties.ipConfigurations[0].properties.privateIPAddress
+    }
+    ipAddress: wthonpremvmpip01.properties.ipAddress
+  }
 }
 
 resource wthhubgwpip01 'Microsoft.Network/publicIPAddresses@2022-01-01' = {
@@ -58,8 +110,8 @@ resource wthhubgwpip01 'Microsoft.Network/publicIPAddresses@2022-01-01' = {
     publicIPAllocationMethod: 'Static'
   }
 }
-
 output pipgw1 string = wthhubgwpip01.properties.ipAddress
+
 
 resource wthhubgwpip02 'Microsoft.Network/publicIPAddresses@2022-01-01' = {
   name: 'wth-pip-gw02'
@@ -75,42 +127,24 @@ resource wthhubgwpip02 'Microsoft.Network/publicIPAddresses@2022-01-01' = {
 
 output pipgw2 string = wthhubgwpip02.properties.ipAddress
 
-resource wthhubvnetgw 'Microsoft.Network/virtualNetworkGateways@2022-01-01' = {
-  name: 'wth-vngw-hub01'
+resource vpngateways 'Microsoft.Network/vpnGateways@2021-03-01' = {
+  name: 'wth-vngw-hub02'
   location: location
   properties: {
-    activeActive: true
     bgpSettings: {
       asn: 65515
     }
-    enableBgp: true
-    gatewayType: 'Vpn'
-    vpnType: 'RouteBased'
-    vpnGatewayGeneration: 'Generation1'
-    sku: {
-      name: 'VpnGw1'
-      tier: 'VpnGw1'
+    virtualHub: {
+      id: virtualhub.id
     }
-    ipConfigurations: [
+    connections: [
       {
-        name: 'ipconfig1'
+        name: 'wth-cxn-hub01'
         properties: {
-          publicIPAddress: {
-            id: wthhubgwpip01.id
-          }
-          subnet: {
-            id: '${wthhubvnet.id}/subnets/GatewaySubnet'
-          }
-        }
-      }
-      {
-        name: 'ipconfig2'
-        properties: {
-          publicIPAddress: {
-            id: wthhubgwpip02.id
-          }
-          subnet: {
-            id: '${wthhubvnet.id}/subnets/GatewaySubnet'
+          enableBgp: true
+          connectionBandwidth: 1
+          remoteVpnSite: {
+            id: vpnsites.id
           }
         }
       }
@@ -118,10 +152,13 @@ resource wthhubvnetgw 'Microsoft.Network/virtualNetworkGateways@2022-01-01' = {
   }
 }
 
-output wthhubvnetgwasn int = wthhubvnetgw.properties.bgpSettings.asn
-output wthhubvnetgwprivateip1 string = wthhubvnetgw.properties.bgpSettings.bgpPeeringAddresses[0].defaultBgpIpAddresses[0]
-output wthhubvnetgwprivateip2 string = wthhubvnetgw.properties.bgpSettings.bgpPeeringAddresses[1].defaultBgpIpAddresses[0]
+output vpngatewaysasn int = vpngateways.properties.bgpSettings.asn
+output vpngatewaysprivateip1 string = vpngateways.properties.bgpSettings.bgpPeeringAddresses[0].tunnelIpAddresses[0]
+output vpngatewaysprivateip2 string = vpngateways.properties.bgpSettings.bgpPeeringAddresses[1].tunnelIpAddresses[0]
+output wthhubvnetgwprivateip1 string = vpngateways.properties.bgpSettings.bgpPeeringAddresses[0].tunnelIpAddresses[1]
+output wthhubvnetgwprivateip2 string = vpngateways.properties.bgpSettings.bgpPeeringAddresses[1].tunnelIpAddresses[1]
 
+/*
 resource changerdpport 'Microsoft.Compute/virtualMachines/extensions@2022-03-01' = {
   name: '${wthhubvm01.name}/wth-vmextn-changerdpport33899'
   location: location
@@ -142,7 +179,7 @@ resource changerdpport 'Microsoft.Compute/virtualMachines/extensions@2022-03-01'
       New-NetFirewallRule -DisplayName 'ICMPv4' -Direction Inbound -Action Allow -Protocol icmpv4 -Enabled True
       '@
       $bytes = [System.Text.Encoding]::Unicode.GetBytes($s)
-      [convert]::ToBase64String($bytes) */
+      [convert]::ToBase64String($bytes) 
       commandToExecute: 'powershell.exe -ep bypass -encodedcommand UwBlAHQALQBJAHQAZQBtAFAAcgBvAHAAZQByAHQAeQAgAC0AUABhAHQAaAAgACIASABLAEwATQA6AFwAUwB5AHMAdABlAG0AXABDAHUAcgByAGUAbgB0AEMAbwBuAHQAcgBvAGwAUwBlAHQAXABDAG8AbgB0AHIAbwBsAFwAVABlAHIAbQBpAG4AYQBsACAAUwBlAHIAdgBlAHIAXABXAGkAbgBTAHQAYQB0AGkAbwBuAHMAXABSAEQAUAAtAFQAYwBwAFwAIgAgAC0ATgBhAG0AZQAgAFAAbwByAHQATgB1AG0AYgBlAHIAIAAtAFYAYQBsAHUAZQAgADMAMwA4ADkAOQANAAoATgBlAHcALQBOAGUAdABGAGkAcgBlAHcAYQBsAGwAUgB1AGwAZQAgAC0ARABpAHMAcABsAGEAeQBOAGEAbQBlACAAIgBSAEQAUAAgADMAMwA4ADkAOQAgAFQAQwBQACIAIAAtAEQAaQByAGUAYwB0AGkAbwBuACAASQBuAGIAbwB1AG4AZAAgAC0ATABvAGMAYQBsAFAAbwByAHQAIAAzADMAOAA5ADkAIAAtAFAAcgBvAHQAbwBjAG8AbAAgAFQAQwBQACAALQBBAGMAdABpAG8AbgAgAEEAbABsAG8AdwANAAoATgBlAHcALQBOAGUAdABGAGkAcgBlAHcAYQBsAGwAUgB1AGwAZQAgAC0ARABpAHMAcABsAGEAeQBOAGEAbQBlACAAIgBSAEQAUAAgADMAMwA4ADkAOQAgAFUARABQACIAIAAtAEQAaQByAGUAYwB0AGkAbwBuACAASQBuAGIAbwB1AG4AZAAgAC0ATABvAGMAYQBsAFAAbwByAHQAIAAzADMAOAA5ADkAIAAtAFAAcgBvAHQAbwBjAG8AbAAgAFUARABQACAALQBBAGMAdABpAG8AbgAgAEEAbABsAG8AdwANAAoAUgBlAHMAdABhAHIAdAAtAFMAZQByAHYAaQBjAGUAIAAtAE4AYQBtAGUAIABUAGUAcgBtAFMAZQByAHYAaQBjAGUAIAAtAEYAbwByAGMAZQANAAoADQAKAE4AZQB3AC0ATgBlAHQARgBpAHIAZQB3AGEAbABsAFIAdQBsAGUAIAAtAEQAaQBzAHAAbABhAHkATgBhAG0AZQAgACcASQBDAE0AUAB2ADQAJwAgAC0ARABpAHIAZQBjAHQAaQBvAG4AIABJAG4AYgBvAHUAbgBkACAALQBBAGMAdABpAG8AbgAgAEEAbABsAG8AdwAgAC0AUAByAG8AdABvAGMAbwBsACAAaQBjAG0AcAB2ADQAIAAtAEUAbgBhAGIAbABlAGQAIABUAHIAdQBlAA=='
     }
   }
@@ -279,3 +316,4 @@ resource nsghubvms 'Microsoft.Network/networkSecurityGroups@2022-01-01' = {
     ]
   }
 }
+*/

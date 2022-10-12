@@ -79,6 +79,10 @@ switch ($challengeNumber) {
         Write-Host "`tDeploying resource groups..."
         New-AzDeployment -Location $location -TemplateFile ./01-00-resourceGroups.bicep
 
+        Write-Host "`tDeploying preliminary on-prem resources"
+        $jobs = @()
+        $baseInfraJobs += @{'wth-rg-spoke1' = (New-AzResourceGroupDeployment -ResourceGroupName 'wth-rg-onprem' -TemplateFile ./01-01-onprem.bicep -TemplateParameterObject @{location = $location } -AsJob)}
+
         Write-Host "`tDeploying base resources (this will take up to 60 minutes for the VNET Gateway)..."
         $baseInfraJobs = @{}
         $baseInfraJobs += @{'wth-rg-spoke1' = (New-AzResourceGroupDeployment -ResourceGroupName 'wth-rg-spoke1' -TemplateFile ./01-01-spoke1.bicep -TemplateParameterObject @{vmPassword = $vmPassword; location = $location } -AsJob)}
@@ -102,6 +106,13 @@ switch ($challengeNumber) {
         $gw1privateip = $baseInfraJobs.'wth-rg-hub'.Output.Outputs.wthhubvnetgwprivateip1.Value
         $gw2privateip = $baseInfraJobs.'wth-rg-hub'.Output.Outputs.wthhubvnetgwprivateip2.Value
 
+        <#
+        $gw1pip = $baseInfraJobs.'wth-rg-hub'.Output.Outputs.pipgw1.Value
+        $gw2pip = $baseInfraJobs.'wth-rg-hub'.Output.Outputs.pipgw2.Value
+        $gwasn = $baseInfraJobs.'wth-rg-hub'.Output.Outputs.wthhubvnetgwasn.Value
+        $gw1privateip = $baseInfraJobs.'wth-rg-hub'.Output.Outputs.wthhubvnetgwprivateip1.Value
+        $gw2privateip = $baseInfraJobs.'wth-rg-hub'.Output.Outputs.wthhubvnetgwprivateip2.Value
+
         Write-Host "`tDeploying VNET Peering..."
         $peeringJobs = @()
         $peeringJobs += New-AzResourceGroupDeployment -ResourceGroupName 'wth-rg-hub' -TemplateFile ./01-02-vnetpeeringhub.bicep -TemplateParameterObject @{} -AsJob
@@ -117,6 +128,7 @@ switch ($challengeNumber) {
                 Write-Error "A VNET peering deployment experienced an error: $($job.error)"
             }
         }
+        #>
 
         Write-Host "`tDeploying 'onprem' infra"
 
@@ -151,7 +163,7 @@ switch ($challengeNumber) {
             Write-Error "A on-prem infrastructure deployment experienced an error: $($onPremJob.error)"
         }
 
-        Write-Host "`tConfiguring VPN resources..."
+<#         Write-Host "`tConfiguring VPN resources..."
 
         $vpnJobs = @()
         $vpnJobs += New-AzResourceGroupDeployment -ResourceGroupName 'wth-rg-hub' -TemplateFile ./01-04-hubvpnconfig.bicep -TemplateParameterObject @{location = $location } -AsJob
@@ -161,7 +173,7 @@ switch ($challengeNumber) {
         # check for deployment errors
         If ($vpnJobs.Error) {
             Write-Error "A VPN resource/configuration deployment experienced an error: $($vpnJobs.error)"
-        }
+        } #>
     }
     2 {
         Write-Host "Deploying resources for Challenge 2: Azure Firewall"
