@@ -105,6 +105,8 @@ switch ($challengeNumber) {
         $gwasn = $baseInfraJobs.'wth-rg-hub'.Output.Outputs.wthhubvnetgwasn.Value
         $gw1privateip = $baseInfraJobs.'wth-rg-hub'.Output.Outputs.wthhubvnetgwprivateip1.Value
         $gw2privateip = $baseInfraJobs.'wth-rg-hub'.Output.Outputs.wthhubvnetgwprivateip2.Value
+        $gw1BGPip = $baseInfraJobs.'wth-rg-hub'.Output.Outputs.wthhubvnetgwBGPip1.Value
+        $gw2BGPip = $baseInfraJobs.'wth-rg-hub'.Output.Outputs.wthhubvnetgwBGPip2.Value
 
         <#
         $gw1pip = $baseInfraJobs.'wth-rg-hub'.Output.Outputs.pipgw1.Value
@@ -150,6 +152,8 @@ switch ($challengeNumber) {
         $updatedCsrConfigContent = $updatedCsrConfigContent.Replace('**VNETGWASN**',$gwasn)
         $updatedCsrConfigContent = $updatedCsrConfigContent.Replace('**GW0_Private_IP**',$gw1privateip)
         $updatedCsrConfigContent = $updatedCsrConfigContent.Replace('**GW1_Private_IP**',$gw2privateip)
+        $updatedCsrConfigContent = $updatedCsrConfigContent.Replace('**GW0_BGP_IP**',$gw1BGPip)
+        $updatedCsrConfigContent = $updatedCsrConfigContent.Replace('**GW1_BGP_IP**',$gw2BGPip)
 
         Set-Content -Path .\csrScript.txt.tmp -Value $updatedCsrConfigContent -Force
 

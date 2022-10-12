@@ -157,6 +157,8 @@ output vpngatewaysprivateip1 string = vpngateways.properties.bgpSettings.bgpPeer
 output vpngatewaysprivateip2 string = vpngateways.properties.bgpSettings.bgpPeeringAddresses[1].tunnelIpAddresses[0]
 output wthhubvnetgwprivateip1 string = vpngateways.properties.bgpSettings.bgpPeeringAddresses[0].tunnelIpAddresses[1]
 output wthhubvnetgwprivateip2 string = vpngateways.properties.bgpSettings.bgpPeeringAddresses[1].tunnelIpAddresses[1]
+output wthhubvnetgwBGPip1 string = vpngateways.properties.bgpSettings.bgpPeeringAddresses[0].defaultBgpIpAddresses[0]
+output wthhubvnetgwBGPip2 string = vpngateways.properties.bgpSettings.bgpPeeringAddresses[1].defaultBgpIpAddresses[0]
 
 /*
 resource changerdpport 'Microsoft.Compute/virtualMachines/extensions@2022-03-01' = {
