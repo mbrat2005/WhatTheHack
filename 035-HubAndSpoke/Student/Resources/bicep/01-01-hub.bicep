@@ -5,12 +5,12 @@ param vmPassword string
 
 targetScope = 'resourceGroup'
 
-resource wthonpremvmpip01 'Microsoft.Network/publicIPAddresses@2022-01-01' existing = {
-  name: 'wth-pip-onpremvm01'
+resource wthonpremcsrpip01 'Microsoft.Network/publicIPAddresses@2022-01-01' existing = {
+  name: 'wth-pip-csr01'
   scope: resourceGroup('wth-rg-onprem') 
 }
 
-resource wthonpremvmnic 'Microsoft.Network/networkInterfaces@2022-01-01' existing = {
+resource wthonpremcsrnic 'Microsoft.Network/networkInterfaces@2022-01-01' existing = {
   name: 'wth-nic-onpremvm01'
   scope: resourceGroup('wth-rg-onprem')
 }
@@ -93,39 +93,11 @@ resource vpnsites 'Microsoft.Network/vpnSites@2022-05-01' = {
     }
     bgpProperties: {
       asn: 65510
-      bgpPeeringAddress: wthonpremvmnic.properties.ipConfigurations[0].properties.privateIPAddress
+      bgpPeeringAddress: wthonpremcsrnic.properties.ipConfigurations[0].properties.privateIPAddress
     }
-    ipAddress: wthonpremvmpip01.properties.ipAddress
+    ipAddress: wthonpremcsrpip01.properties.ipAddress
   }
 }
-
-resource wthhubgwpip01 'Microsoft.Network/publicIPAddresses@2022-01-01' = {
-  name: 'wth-pip-gw01'
-  location: location
-  sku: {
-    name: 'Standard'
-    tier: 'Regional'
-  }
-  properties: {
-    publicIPAllocationMethod: 'Static'
-  }
-}
-output pipgw1 string = wthhubgwpip01.properties.ipAddress
-
-
-resource wthhubgwpip02 'Microsoft.Network/publicIPAddresses@2022-01-01' = {
-  name: 'wth-pip-gw02'
-  location: location
-  sku: {
-    name: 'Standard'
-    tier: 'Regional'
-  }
-  properties: {
-    publicIPAllocationMethod: 'Static'
-  }
-}
-
-output pipgw2 string = wthhubgwpip02.properties.ipAddress
 
 resource vpngateways 'Microsoft.Network/vpnGateways@2021-03-01' = {
   name: 'wth-vngw-hub02'
@@ -146,6 +118,8 @@ resource vpngateways 'Microsoft.Network/vpnGateways@2021-03-01' = {
           remoteVpnSite: {
             id: vpnsites.id
           }
+          sharedKey: '123mysecretkey'
+
         }
       }
     ]
@@ -153,10 +127,10 @@ resource vpngateways 'Microsoft.Network/vpnGateways@2021-03-01' = {
 }
 
 output vpngatewaysasn int = vpngateways.properties.bgpSettings.asn
-output vpngatewaysprivateip1 string = vpngateways.properties.bgpSettings.bgpPeeringAddresses[0].tunnelIpAddresses[0]
-output vpngatewaysprivateip2 string = vpngateways.properties.bgpSettings.bgpPeeringAddresses[1].tunnelIpAddresses[0]
-output wthhubvnetgwprivateip1 string = vpngateways.properties.bgpSettings.bgpPeeringAddresses[0].tunnelIpAddresses[1]
-output wthhubvnetgwprivateip2 string = vpngateways.properties.bgpSettings.bgpPeeringAddresses[1].tunnelIpAddresses[1]
+output vpngatewaysprivateip1 string = vpngateways.properties.bgpSettings.bgpPeeringAddresses[0].tunnelIpAddresses[1]
+output vpngatewaysprivateip2 string = vpngateways.properties.bgpSettings.bgpPeeringAddresses[1].tunnelIpAddresses[1]
+output pipgw1 string = vpngateways.properties.bgpSettings.bgpPeeringAddresses[0].tunnelIpAddresses[0]
+output pipgw2 string = vpngateways.properties.bgpSettings.bgpPeeringAddresses[1].tunnelIpAddresses[0]
 output wthhubvnetgwBGPip1 string = vpngateways.properties.bgpSettings.bgpPeeringAddresses[0].defaultBgpIpAddresses[0]
 output wthhubvnetgwBGPip2 string = vpngateways.properties.bgpSettings.bgpPeeringAddresses[1].defaultBgpIpAddresses[0]
 

@@ -102,9 +102,9 @@ switch ($challengeNumber) {
 
         $gw1pip = $baseInfraJobs.'wth-rg-hub'.Output.Outputs.pipgw1.Value
         $gw2pip = $baseInfraJobs.'wth-rg-hub'.Output.Outputs.pipgw2.Value
-        $gwasn = $baseInfraJobs.'wth-rg-hub'.Output.Outputs.wthhubvnetgwasn.Value
-        $gw1privateip = $baseInfraJobs.'wth-rg-hub'.Output.Outputs.wthhubvnetgwprivateip1.Value
-        $gw2privateip = $baseInfraJobs.'wth-rg-hub'.Output.Outputs.wthhubvnetgwprivateip2.Value
+        $gwasn = $baseInfraJobs.'wth-rg-hub'.Output.Outputs.vpngatewaysasn.Value
+        $gw1privateip = $baseInfraJobs.'wth-rg-hub'.Output.Outputs.vpngatewaysprivateip1.Value
+        $gw2privateip = $baseInfraJobs.'wth-rg-hub'.Output.Outputs.vpngatewaysprivateip2.Value
         $gw1BGPip = $baseInfraJobs.'wth-rg-hub'.Output.Outputs.wthhubvnetgwBGPip1.Value
         $gw2BGPip = $baseInfraJobs.'wth-rg-hub'.Output.Outputs.wthhubvnetgwBGPip2.Value
 

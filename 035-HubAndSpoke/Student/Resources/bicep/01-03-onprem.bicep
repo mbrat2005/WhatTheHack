@@ -10,8 +10,16 @@ resource wthonpremvnet 'Microsoft.Network/virtualNetworks@2021-08-01' existing =
   name: 'wth-vnet-onprem01'
 }
 
-resource wthonpremvmpip01 'Microsoft.Network/publicIPAddresses@2022-01-01' existing = {
+resource wthonpremvmpip01 'Microsoft.Network/publicIPAddresses@2022-01-01' = {
   name: 'wth-pip-onpremvm01'
+  location: location
+  sku: {
+    name: 'Standard'
+  }
+  properties: {
+    publicIPAllocationMethod: 'Static'
+    publicIPAddressVersion: 'IPv4'
+  }
 }
 
 resource wthonpremvmnic 'Microsoft.Network/networkInterfaces@2022-01-01' existing = {
@@ -85,38 +93,12 @@ resource nsgonpremvms 'Microsoft.Network/networkSecurityGroups@2022-01-01' exist
   name: 'wth-nsg-onpremvmssubnet'
 }
 
-resource wthonpremcsrpip01 'Microsoft.Network/publicIPAddresses@2022-01-01' = {
+resource wthonpremcsrpip01 'Microsoft.Network/publicIPAddresses@2022-01-01' existing = {
   name: 'wth-pip-csr01'
-  location: location
-  sku: {
-    name: 'Standard'
-    tier: 'Regional'
-  }
-  properties: {
-    publicIPAllocationMethod: 'Static'
-  }
 }
 
-resource wthonpremcsrnic 'Microsoft.Network/networkInterfaces@2022-01-01' = {
+resource wthonpremcsrnic 'Microsoft.Network/networkInterfaces@2022-01-01' existing = {
   name: 'wth-nic-csr01'
-  location: location
-  properties: {
-    enableIPForwarding: true
-    ipConfigurations: [
-      {
-        name: 'ipconfig1'
-        properties: {
-          subnet: {
-            id: '${wthonpremvnet.id}/subnets/subnet-vpn'
-          }
-          privateIPAddress: '172.16.0.4'
-          publicIPAddress: {
-            id: wthonpremcsrpip01.id
-          }
-        }
-      }
-    ]
-  }
 }
 
 resource ciscocsr 'Microsoft.Compute/virtualMachines@2022-03-01' = {

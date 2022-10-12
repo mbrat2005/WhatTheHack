@@ -4,8 +4,8 @@ targetScope = 'resourceGroup'
 //onprem resources
 
 
-resource wthonpremvmpip01 'Microsoft.Network/publicIPAddresses@2022-01-01' = {
-  name: 'wth-pip-onpremvm01'
+resource wthonpremcsrpip01 'Microsoft.Network/publicIPAddresses@2022-01-01' = {
+  name: 'wth-pip-csr01'
   location: location
   sku: {
     name: 'Standard'
@@ -13,6 +13,28 @@ resource wthonpremvmpip01 'Microsoft.Network/publicIPAddresses@2022-01-01' = {
   }
   properties: {
     publicIPAllocationMethod: 'Static'
+  }
+}
+
+resource wthonpremcsrnic 'Microsoft.Network/networkInterfaces@2022-01-01' = {
+  name: 'wth-nic-csr01'
+  location: location
+  properties: {
+    enableIPForwarding: true
+    ipConfigurations: [
+      {
+        name: 'ipconfig1'
+        properties: {
+          subnet: {
+            id: '${wthonpremvnet.id}/subnets/subnet-vpn'
+          }
+          privateIPAddress: '172.16.0.4'
+          publicIPAddress: {
+            id: wthonpremcsrpip01.id
+          }
+        }
+      }
+    ]
   }
 }
 
@@ -130,7 +152,7 @@ resource wthonpremvmnic 'Microsoft.Network/networkInterfaces@2022-01-01' = {
           }
           privateIPAddress: '172.16.10.4'
           publicIPAddress: {
-            id: wthonpremvmpip01.id
+            id: wthonpremcsrpip01.id
           }
         }
       }
