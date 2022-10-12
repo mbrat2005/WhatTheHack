@@ -20,6 +20,12 @@ resource wthspoke3vnet 'Microsoft.Network/virtualNetworks@2021-08-01' = {
         name: 'subnet-spoke3vms'
         properties: {
           addressPrefix: '10.3.10.0/24'
+          networkSecurityGroup: {
+            id: nsgspoke3vms.id
+          }
+          routeTable: { 
+            id: rtspoke3vms.id 
+          }
         }
       }
     ]
@@ -127,7 +133,7 @@ resource rtspoke3vms 'Microsoft.Network/routeTables@2022-01-01' = {
   }
 }
 
-resource nsgspoke1vms 'Microsoft.Network/networkSecurityGroups@2022-01-01' = {
+resource nsgspoke3vms 'Microsoft.Network/networkSecurityGroups@2022-01-01' = {
   name: 'wth-nsg-spoke3vmssubnet'
   location: location
   properties: {

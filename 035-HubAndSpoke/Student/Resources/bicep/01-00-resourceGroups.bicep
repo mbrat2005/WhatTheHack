@@ -17,6 +17,11 @@ resource wthrgspoke02 'Microsoft.Resources/resourceGroups@2021-04-01' = {
   location: location
 }
 
+resource wthrgspoke03 'Microsoft.Resources/resourceGroups@2021-04-01' = {
+  name: 'wth-rg-spoke3'
+  location: location
+}
+
 resource wthrgonprem 'Microsoft.Resources/resourceGroups@2021-04-01' = {
   name: 'wth-rg-onprem'
   location: location

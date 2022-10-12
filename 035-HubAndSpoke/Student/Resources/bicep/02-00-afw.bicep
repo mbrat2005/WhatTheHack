@@ -61,14 +61,9 @@ resource wthafw 'Microsoft.Network/azureFirewalls@2022-01-01' = {
   }
 }
 
-resource wthlaw 'Microsoft.OperationalInsights/workspaces@2021-12-01-preview' = {
+resource wthlaw 'Microsoft.OperationalInsights/workspaces@2021-12-01-preview' existing = {
   name: 'wth-law-default01'
-  location: location
-  properties: {
-    sku: {
-      name: 'PerGB2018'
-    }
-  }
+  scope: resourceGroup('wth-rg-hub')
 }
 
 resource wthafwdiagsettings 'Microsoft.Insights/diagnosticSettings@2021-05-01-preview' = {

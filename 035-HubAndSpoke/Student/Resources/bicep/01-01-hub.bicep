@@ -279,3 +279,22 @@ resource nsghubvms 'Microsoft.Network/networkSecurityGroups@2022-01-01' = {
     ]
   }
 }
+
+resource wthlaw 'Microsoft.OperationalInsights/workspaces@2021-12-01-preview' = {
+  name: 'wth-law-default01'
+  location: location
+  properties: {
+    sku: {
+      name: 'PerGB2018'
+    }
+  }
+}
+
+resource flowLogStorage 'Microsoft.Storage/storageAccounts@2022-05-01' = {
+  name: 'wthflow${uniqueString(subscription().subscriptionId, 'wth-rg-hub')}'
+  location: location
+  sku: {
+    name:  'Standard_LRS'
+  }
+  kind: 'StorageV2'
+}

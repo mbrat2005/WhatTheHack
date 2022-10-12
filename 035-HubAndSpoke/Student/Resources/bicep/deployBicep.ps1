@@ -83,6 +83,8 @@ switch ($challengeNumber) {
         $baseInfraJobs = @{}
         $baseInfraJobs += @{'wth-rg-spoke1' = (New-AzResourceGroupDeployment -ResourceGroupName 'wth-rg-spoke1' -TemplateFile ./01-01-spoke1.bicep -TemplateParameterObject @{vmPassword = $vmPassword; location = $location } -AsJob)}
         $baseInfraJobs += @{'wth-rg-spoke2' = (New-AzResourceGroupDeployment -ResourceGroupName 'wth-rg-spoke2' -TemplateFile ./01-01-spoke2.bicep -TemplateParameterObject @{vmPassword = $vmPassword; location = $location } -AsJob)}
+        $baseInfraJobs += @{'wth-rg-spoke3' = (New-AzResourceGroupDeployment -ResourceGroupName 'wth-rg-spoke3' -TemplateFile ./01-01-spoke3.bicep -TemplateParameterObject @{vmPassword = $vmPassword; location = $location } -AsJob)}
+
         $baseInfraJobs += @{'wth-rg-hub' = (New-AzResourceGroupDeployment -ResourceGroupName 'wth-rg-hub' -TemplateFile ./01-01-hub.bicep -TemplateParameterObject @{vmPassword = $vmPassword; location = $location } -AsJob)}
 
         Write-Host "`tWaiting up to 60 minutes for resources to deploy..." 
@@ -107,6 +109,7 @@ switch ($challengeNumber) {
         $peeringJobs += New-AzResourceGroupDeployment -ResourceGroupName 'wth-rg-hub' -TemplateFile ./01-02-vnetpeeringhub.bicep -TemplateParameterObject @{} -AsJob
         $peeringJobs += New-AzResourceGroupDeployment -ResourceGroupName 'wth-rg-spoke1' -TemplateFile ./01-02-vnetpeeringspoke1.bicep -TemplateParameterObject @{}  -AsJob
         $peeringJobs += New-AzResourceGroupDeployment -ResourceGroupName 'wth-rg-spoke2' -TemplateFile ./01-02-vnetpeeringspoke2.bicep -TemplateParameterObject @{}  -AsJob
+        $peeringJobs += New-AzResourceGroupDeployment -ResourceGroupName 'wth-rg-spoke3' -TemplateFile ./01-02-vnetpeeringspoke3.bicep -TemplateParameterObject @{}  -AsJob
 
         $peeringJobs | Wait-Job -Timeout 300 | Out-Null
 
@@ -162,6 +165,18 @@ switch ($challengeNumber) {
         If ($vpnJobs.Error) {
             Write-Error "A VPN resource/configuration deployment experienced an error: $($vpnJobs.error)"
         }
+
+        Write-Host "`tConfiguring flow logs and network watcher..."
+
+        $jobs = @()
+        $jobs += New-AzResourceGroupDeployment -ResourceGroupName 'NetworkWatcherRG' -TemplateFile ./01-05-networkwatcherrg.bicep -TemplateParameterObject @{location = $location } -AsJob
+
+        $jobs | Wait-Job -Timeout 600 | Out-Null
+
+        # check for deployment errors
+        If ($jobs.Error) {
+            Write-Error "A flow log deployment experienced an error: $($jobs.error)"
+        }
     }
     2 {
         Write-Host "Deploying resources for Challenge 2: Azure Firewall"
@@ -190,6 +205,7 @@ switch ($challengeNumber) {
         $jobs = @()
         $jobs += New-AzResourceGroupDeployment -ResourceGroupName 'wth-rg-spoke1' -TemplateFile ./02-01-spoke1.bicep -TemplateParameterObject @{location = $location } -AsJob
         $jobs += New-AzResourceGroupDeployment -ResourceGroupName 'wth-rg-spoke2' -TemplateFile ./02-01-spoke2.bicep -TemplateParameterObject @{location = $location } -AsJob
+        $jobs += New-AzResourceGroupDeployment -ResourceGroupName 'wth-rg-spoke3' -TemplateFile ./02-01-spoke3.bicep -TemplateParameterObject @{location = $location } -AsJob
         $jobs += New-AzResourceGroupDeployment -ResourceGroupName 'wth-rg-hub' -TemplateFile ./02-01-hub.bicep -TemplateParameterObject @{location = $location } -AsJob
         $jobs += New-AzResourceGroupDeployment -ResourceGroupName 'wth-rg-onprem' -TemplateFile ./02-01-onprem.bicep -TemplateParameterObject @{location = $location } -AsJob
 
