@@ -1,4 +1,5 @@
 param location string = 'eastus2'
+param locationSecondary string = 'westus3'
 
 targetScope = 'subscription'
 //hub resources
@@ -20,4 +21,9 @@ resource wthrgspoke02 'Microsoft.Resources/resourceGroups@2021-04-01' = {
 resource wthrgonprem 'Microsoft.Resources/resourceGroups@2021-04-01' = {
   name: 'wth-rg-onprem'
   location: location
+}
+
+resource wthrgonprem2 'Microsoft.Resources/resourceGroups@2021-04-01' = {
+  name: 'wth-rg-onprem2'
+  location: locationSecondary
 }

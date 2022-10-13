@@ -27,6 +27,11 @@ param (
     [string]
     $location = 'EastUS2',
 
+    # resource deployment Azure region, defaults to 'eastus2'
+    [Parameter(Mandatory = $false)]
+    [string]
+    $locationSecondary = 'WestUS3',
+
     # Parameter help description
     [Parameter(Mandatory = $false)]
     [SecureString]
@@ -77,17 +82,28 @@ switch ($challengeNumber) {
         }
 
         Write-Host "`tDeploying resource groups..."
-        New-AzDeployment -Location $location -TemplateFile ./01-00-resourceGroups.bicep
+        New-AzDeployment -Location $location -TemplateFile ./01-00-resourceGroups.bicep #-TemplateParameterObject @{location = $location }
 
         Write-Host "`tDeploying preliminary on-prem resources"
         $jobs = @()
-        $baseInfraJobs += @{'wth-rg-spoke1' = (New-AzResourceGroupDeployment -ResourceGroupName 'wth-rg-onprem' -TemplateFile ./01-01-onprem.bicep -TemplateParameterObject @{location = $location } -AsJob)}
+        $jobs += New-AzResourceGroupDeployment -ResourceGroupName 'wth-rg-onprem' -TemplateFile ./01-01-onprem.bicep -TemplateParameterObject @{location = $location } -AsJob
+        $jobs += New-AzResourceGroupDeployment -ResourceGroupName 'wth-rg-onprem2' -TemplateFile ./01-01-onprem2.bicep -TemplateParameterObject @{locationSecondary = $locationSecondary } -AsJob
+
+        $jobs | Wait-Job | Out-Null
+
+        # check for deployment errors
+        $jobs | Foreach-Object {
+            $job = $_
+            If ($job.Error) {
+                Write-Error "An on-prem deployment job experienced an error: $($job.error)"
+            }
+        }
 
         Write-Host "`tDeploying base resources (this will take up to 60 minutes for the VNET Gateway)..."
         $baseInfraJobs = @{}
         $baseInfraJobs += @{'wth-rg-spoke1' = (New-AzResourceGroupDeployment -ResourceGroupName 'wth-rg-spoke1' -TemplateFile ./01-01-spoke1.bicep -TemplateParameterObject @{vmPassword = $vmPassword; location = $location } -AsJob)}
         $baseInfraJobs += @{'wth-rg-spoke2' = (New-AzResourceGroupDeployment -ResourceGroupName 'wth-rg-spoke2' -TemplateFile ./01-01-spoke2.bicep -TemplateParameterObject @{vmPassword = $vmPassword; location = $location } -AsJob)}
-        $baseInfraJobs += @{'wth-rg-hub' = (New-AzResourceGroupDeployment -ResourceGroupName 'wth-rg-hub' -TemplateFile ./01-01-hub.bicep -TemplateParameterObject @{vmPassword = $vmPassword; location = $location } -AsJob)}
+        $baseInfraJobs += @{'wth-rg-hub' = (New-AzResourceGroupDeployment -ResourceGroupName 'wth-rg-hub' -TemplateFile ./01-01-hub.bicep -TemplateParameterObject @{vmPassword = $vmPassword; location = $location; locationSecondary = $locationSecondary } -AsJob)}
 
         Write-Host "`tWaiting up to 60 minutes for resources to deploy..." 
         $baseInfraJobs.GetEnumerator().ForEach({$_.Value}) | Wait-Job -Timeout 3600 | Out-Null
@@ -108,18 +124,17 @@ switch ($challengeNumber) {
         $gw1BGPip = $baseInfraJobs.'wth-rg-hub'.Output.Outputs.wthhubvnetgwBGPip1.Value
         $gw2BGPip = $baseInfraJobs.'wth-rg-hub'.Output.Outputs.wthhubvnetgwBGPip2.Value
 
-        <#
-        $gw1pip = $baseInfraJobs.'wth-rg-hub'.Output.Outputs.pipgw1.Value
-        $gw2pip = $baseInfraJobs.'wth-rg-hub'.Output.Outputs.pipgw2.Value
-        $gwasn = $baseInfraJobs.'wth-rg-hub'.Output.Outputs.wthhubvnetgwasn.Value
-        $gw1privateip = $baseInfraJobs.'wth-rg-hub'.Output.Outputs.wthhubvnetgwprivateip1.Value
-        $gw2privateip = $baseInfraJobs.'wth-rg-hub'.Output.Outputs.wthhubvnetgwprivateip2.Value
+        $gw1pip2 = $baseInfraJobs.'wth-rg-hub'.Output.Outputs.pipgw12.Value
+        $gw2pip2 = $baseInfraJobs.'wth-rg-hub'.Output.Outputs.pipgw22.Value
+        $gwasn2 = $baseInfraJobs.'wth-rg-hub'.Output.Outputs.vpngatewaysasn2.Value
+        $gw1privateip2 = $baseInfraJobs.'wth-rg-hub'.Output.Outputs.vpngatewaysprivateip12.Value
+        $gw2privateip2 = $baseInfraJobs.'wth-rg-hub'.Output.Outputs.vpngatewaysprivateip22.Value
+        $gw1BGPip2 = $baseInfraJobs.'wth-rg-hub'.Output.Outputs.wthhubvnetgwBGPip12.Value
+        $gw2BGPip2 = $baseInfraJobs.'wth-rg-hub'.Output.Outputs.wthhubvnetgwBGPip22.Value
 
         Write-Host "`tDeploying VNET Peering..."
         $peeringJobs = @()
-        $peeringJobs += New-AzResourceGroupDeployment -ResourceGroupName 'wth-rg-hub' -TemplateFile ./01-02-vnetpeeringhub.bicep -TemplateParameterObject @{} -AsJob
-        $peeringJobs += New-AzResourceGroupDeployment -ResourceGroupName 'wth-rg-spoke1' -TemplateFile ./01-02-vnetpeeringspoke1.bicep -TemplateParameterObject @{}  -AsJob
-        $peeringJobs += New-AzResourceGroupDeployment -ResourceGroupName 'wth-rg-spoke2' -TemplateFile ./01-02-vnetpeeringspoke2.bicep -TemplateParameterObject @{}  -AsJob
+        $peeringJobs += New-AzResourceGroupDeployment -ResourceGroupName 'wth-rg-hub' -TemplateFile ./01-02-vnetpeeringhub.bicep -TemplateParameterObject @{ location = $location; locationSecondary = $locationSecondary} -AsJob
 
         $peeringJobs | Wait-Job -Timeout 300 | Out-Null
 
@@ -130,7 +145,6 @@ switch ($challengeNumber) {
                 Write-Error "A VNET peering deployment experienced an error: $($job.error)"
             }
         }
-        #>
 
         Write-Host "`tDeploying 'onprem' infra"
 
@@ -154,11 +168,28 @@ switch ($challengeNumber) {
         $updatedCsrConfigContent = $updatedCsrConfigContent.Replace('**GW1_Private_IP**',$gw2privateip)
         $updatedCsrConfigContent = $updatedCsrConfigContent.Replace('**GW0_BGP_IP**',$gw1BGPip)
         $updatedCsrConfigContent = $updatedCsrConfigContent.Replace('**GW1_BGP_IP**',$gw2BGPip)
+        $updatedCsrConfigContent = $updatedCsrConfigContent.Replace('**ONPREM_BGP_AS**','65510')
+        
 
         Set-Content -Path .\csrScript.txt.tmp -Value $updatedCsrConfigContent -Force
 
+        #update csr bootstrap file - secondary region
+        $csrConfigContent = Get-Content -Path .\csrScript.txt
+        $updatedCsrConfigContent = $csrConfigContent
+        $updatedCsrConfigContent = $updatedCsrConfigContent.Replace('**GW0_Public_IP**',$gw1pip2)
+        $updatedCsrConfigContent = $updatedCsrConfigContent.Replace('**GW1_Public_IP**',$gw2pip2)
+        $updatedCsrConfigContent = $updatedCsrConfigContent.Replace('**VNETGWASN**',$gwasn2)
+        $updatedCsrConfigContent = $updatedCsrConfigContent.Replace('**GW0_Private_IP**',$gw1privateip2)
+        $updatedCsrConfigContent = $updatedCsrConfigContent.Replace('**GW1_Private_IP**',$gw2privateip2)
+        $updatedCsrConfigContent = $updatedCsrConfigContent.Replace('**GW0_BGP_IP**',$gw1BGPip2)
+        $updatedCsrConfigContent = $updatedCsrConfigContent.Replace('**GW1_BGP_IP**',$gw2BGPip2)
+        $updatedCsrConfigContent = $updatedCsrConfigContent.Replace('**ONPREM_BGP_AS**','65511')
+
+        Set-Content -Path .\csrScript2.txt.tmp -Value $updatedCsrConfigContent -Force
+
         #deploy resources
         $onPremJob = New-AzResourceGroupDeployment -ResourceGroupName 'wth-rg-onprem' -TemplateFile ./01-03-onprem.bicep -TemplateParameterObject @{vmPassword = $vmPassword; location = $location } -AsJob
+        $onPremJob = New-AzResourceGroupDeployment -ResourceGroupName 'wth-rg-onprem2' -TemplateFile ./01-03-onprem2.bicep -TemplateParameterObject @{vmPassword = $vmPassword; locationSecondary = $locationSecondary } -AsJob
 
         $onPremJob | Wait-Job | Out-Null
 

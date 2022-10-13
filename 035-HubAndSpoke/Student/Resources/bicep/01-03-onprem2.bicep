@@ -1,4 +1,4 @@
-param location string = 'eastus2'
+param locationSecondary string = 'eastus2'
 param onpremVMUsername string = 'admin-wth'
 @secure()
 param vmPassword string
@@ -6,13 +6,13 @@ param vmPassword string
 targetScope = 'resourceGroup'
 //onprem resources
 
-resource wthonpremvnet 'Microsoft.Network/virtualNetworks@2021-08-01' existing = {
-  name: 'wth-vnet-onprem01'
+resource wthonpremvnet2 'Microsoft.Network/virtualNetworks@2021-08-01' existing = {
+  name: 'wth-vnet-onprem02'
 }
 
-resource wthonpremvmpip01 'Microsoft.Network/publicIPAddresses@2022-01-01' = {
-  name: 'wth-pip-onpremvm01'
-  location: location
+resource wthonpremvmpip02 'Microsoft.Network/publicIPAddresses@2022-01-01' = {
+  name: 'wth-pip-onpremvm02'
+  location: locationSecondary
   sku: {
     name: 'Standard'
   }
@@ -22,30 +22,9 @@ resource wthonpremvmpip01 'Microsoft.Network/publicIPAddresses@2022-01-01' = {
   }
 }
 
-resource wthonpremvmnic 'Microsoft.Network/networkInterfaces@2022-01-01' = {
-  name: 'wth-nic-onpremvm01'
-  location: location
-  properties: {
-    ipConfigurations: [
-      {
-        name: 'ipconfig1'
-        properties: {
-          subnet: {
-            id: '${wthonpremvnet.id}/subnets/subnet-onpremvms'
-          }
-          privateIPAddress: '172.16.10.4'
-          publicIPAddress: {
-            id: wthonpremvmpip01.id
-          }
-        }
-      }
-    ]
-  }
-}
-
-resource wthonpremvm01 'Microsoft.Compute/virtualMachines@2022-03-01' = {
-  name: 'wth-vm-onprem01'
-  location: location
+resource wthonpremvm02 'Microsoft.Compute/virtualMachines@2022-03-01' = {
+  name: 'wth-vm-onprem02'
+  location: locationSecondary
   properties: {
     hardwareProfile: {
       vmSize: 'Standard_B2s'
@@ -65,7 +44,7 @@ resource wthonpremvm01 'Microsoft.Compute/virtualMachines@2022-03-01' = {
       }
     }
     osProfile: {
-      computerName: 'vm-onprem01'
+      computerName: 'vm-onprem02'
       adminUsername: onpremVMUsername
       adminPassword: vmPassword
       windowsConfiguration: {
@@ -76,7 +55,7 @@ resource wthonpremvm01 'Microsoft.Compute/virtualMachines@2022-03-01' = {
     networkProfile: {
       networkInterfaces: [
         {
-          id: wthonpremvmnic.id
+          id: wthonpremvmnic2.id
         }
       ]
     }
@@ -90,8 +69,8 @@ resource wthonpremvm01 'Microsoft.Compute/virtualMachines@2022-03-01' = {
 }
 
 resource changerdpport 'Microsoft.Compute/virtualMachines/extensions@2022-03-01' = {
-  name: '${wthonpremvm01.name}/wth-vmextn-changerdpport33899'
-  location: location
+  name: '${wthonpremvm02.name}/wth-vmextn-changerdpport33899'
+  location: locationSecondary
   properties: {
     publisher: 'Microsoft.Compute'
     type: 'CustomScriptExtension'
@@ -102,25 +81,13 @@ resource changerdpport 'Microsoft.Compute/virtualMachines/extensions@2022-03-01'
   }
 }
 
-resource rtonpremvms 'Microsoft.Network/routeTables@2022-01-01' existing = {
-  name: 'wth-rt-onpremvmssubnet'
-}
-
-resource nsgonpremvms 'Microsoft.Network/networkSecurityGroups@2022-01-01' existing = {
-  name: 'wth-nsg-onpremvmssubnet'
-}
-
-resource wthonpremcsrpip01 'Microsoft.Network/publicIPAddresses@2022-01-01' existing = {
-  name: 'wth-pip-csr01'
-}
-
-resource wthonpremcsrnic 'Microsoft.Network/networkInterfaces@2022-01-01' existing = {
-  name: 'wth-nic-csr01'
+resource wthonpremcsrnic2 'Microsoft.Network/networkInterfaces@2022-01-01' existing = {
+  name: 'wth-nic-csr02'
 }
 
 resource ciscocsr 'Microsoft.Compute/virtualMachines@2022-03-01' = {
-  name: 'wth-vm-ciscocsr01'
-  location: location
+  name: 'wth-vm-ciscocsr02'
+  location: locationSecondary
   plan: {
     publisher: 'cisco'
     product: 'cisco-csr-1000v'
@@ -145,7 +112,7 @@ resource ciscocsr 'Microsoft.Compute/virtualMachines@2022-03-01' = {
     networkProfile: {
       networkInterfaces: [
         {
-          id: wthonpremcsrnic.id
+          id: wthonpremcsrnic2.id
         }
       ]
     }
@@ -153,7 +120,28 @@ resource ciscocsr 'Microsoft.Compute/virtualMachines@2022-03-01' = {
       adminUsername: onpremVMUsername
       adminPassword: vmPassword
       computerName: 'wthcsr01'
-      customData: loadFileAsBase64('./csrScript.txt.tmp')
+      customData: loadFileAsBase64('./csrScript2.txt.tmp')
     }
+  }
+}
+
+resource wthonpremvmnic2 'Microsoft.Network/networkInterfaces@2022-01-01' = {
+  name: 'wth-nic-onpremvm02'
+  location: locationSecondary
+  properties: {
+    ipConfigurations: [
+      {
+        name: 'ipconfig1'
+        properties: {
+          subnet: {
+            id: '${wthonpremvnet2.id}/subnets/subnet-onpremvms'
+          }
+          privateIPAddress: '172.16.10.4'
+          publicIPAddress: {
+            id: wthonpremvmpip02.id
+          }
+        }
+      }
+    ]
   }
 }

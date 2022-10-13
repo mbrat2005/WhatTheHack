@@ -59,7 +59,7 @@ interface Tunnel1
 exit
 
 !
-router bgp 65510
+router bgp **ONPREM_BGP_AS**
  bgp router-id interface GigabitEthernet1
  bgp log-neighbor-changes
  redistribute connected
@@ -71,6 +71,8 @@ router bgp 65510
  neighbor **GW1_BGP_IP** update-source GigabitEthernet1
  maximum-paths eibgp 4
 !
+ip route **GW0_BGP_IP** 255.255.255.255 Tunnel0
+ip route **GW1_BGP_IP** 255.255.255.255 Tunnel1
 ip route **GW0_Private_IP** 255.255.255.255 Tunnel0
 ip route **GW1_Private_IP** 255.255.255.255 Tunnel1
 !

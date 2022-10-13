@@ -1,61 +1,32 @@
 param location string = 'eastus2'
+param locationSecondary string = 'westus3'
 param hubVMUsername string = 'admin-wth'
 @secure()
 param vmPassword string
 
 targetScope = 'resourceGroup'
 
-resource wthonpremcsrpip01 'Microsoft.Network/publicIPAddresses@2022-01-01' existing = {
+resource wthcsrpip01 'Microsoft.Network/publicIPAddresses@2022-01-01' existing = {
   name: 'wth-pip-csr01'
   scope: resourceGroup('wth-rg-onprem') 
 }
 
-resource wthonpremcsrnic 'Microsoft.Network/networkInterfaces@2022-01-01' existing = {
-  name: 'wth-nic-onpremvm01'
+resource wthcsrnic 'Microsoft.Network/networkInterfaces@2022-01-01' existing = {
+  name: 'wth-nic-csr01'
   scope: resourceGroup('wth-rg-onprem')
+}
+
+resource wthcsrpip02 'Microsoft.Network/publicIPAddresses@2022-01-01' existing = {
+  name: 'wth-pip-csr02'
+  scope: resourceGroup('wth-rg-onprem2') 
+}
+
+resource wthcsrnic2 'Microsoft.Network/networkInterfaces@2022-01-01' existing = {
+  name: 'wth-nic-csr02'
+  scope: resourceGroup('wth-rg-onprem2')
 }
 //hub resources
 
-/* resource wthhubvnet 'Microsoft.Network/virtualNetworks@2021-08-01' = {
-  name: 'wth-vnet-hub01'
-  location: location
-  properties: {
-    addressSpace: {
-      addressPrefixes: [
-        '10.0.0.0/16'
-      ]
-    }
-    subnets: [
-      {
-        name: 'GatewaySubnet'
-        properties: {
-          addressPrefix: '10.0.0.0/24'
-          routeTable: {
-            id: rtvnetgw.id
-          }
-        }
-      }
-      {
-        name: 'subnet-hubvms'
-        properties: {
-          addressPrefix: '10.0.10.0/24'
-          routeTable: {
-            id: rthubvms.id
-          }
-          networkSecurityGroup: {
-            id: nsghubvms.id
-          }
-        }
-      }
-      {
-        name: 'AzureFirewallSubnet'
-        properties: {
-          addressPrefix: '10.0.1.0/24'
-        }
-      }
-    ]
-  }
-} */
 
 resource virtualwans 'Microsoft.Network/virtualWans@2022-05-01' = {
   name: 'wth-vwan-hub02'
@@ -69,7 +40,7 @@ resource virtualwans 'Microsoft.Network/virtualWans@2022-05-01' = {
 }
 
 resource virtualhub 'Microsoft.Network/virtualHubs@2022-05-01' = {
-  name: 'wth-vhub-hub02'
+  name: 'wth-vhub-hub${location}01'
   location: location
   properties: {
     virtualWan: {
@@ -79,8 +50,19 @@ resource virtualhub 'Microsoft.Network/virtualHubs@2022-05-01' = {
   }
 }
 
+resource virtualhub2 'Microsoft.Network/virtualHubs@2022-05-01' = {
+  name: 'wth-vhub-hub${locationSecondary}01'
+  location: locationSecondary
+  properties: {
+    virtualWan: {
+      id: virtualwans.id
+    }
+    addressPrefix: '10.10.0.0/16'
+  }
+}
+
 resource vpnsites 'Microsoft.Network/vpnSites@2022-05-01' = {
-  name: 'wth-vpnsite-hub02'
+  name: 'wth-vpnsite-hub${location}01'
   location: location
   properties: {
     virtualWan: {
@@ -93,14 +75,34 @@ resource vpnsites 'Microsoft.Network/vpnSites@2022-05-01' = {
     }
     bgpProperties: {
       asn: 65510
-      bgpPeeringAddress: wthonpremcsrnic.properties.ipConfigurations[0].properties.privateIPAddress
+      bgpPeeringAddress: wthcsrnic.properties.ipConfigurations[0].properties.privateIPAddress
     }
-    ipAddress: wthonpremcsrpip01.properties.ipAddress
+    ipAddress: wthcsrpip01.properties.ipAddress
   }
 }
 
-resource vpngateways 'Microsoft.Network/vpnGateways@2021-03-01' = {
-  name: 'wth-vngw-hub02'
+resource vpnsites2 'Microsoft.Network/vpnSites@2022-05-01' = {
+  name: 'wth-vpnsite-hub${locationSecondary}01'
+  location: locationSecondary
+  properties: {
+    virtualWan: {
+      id: virtualwans.id
+    }
+    addressSpace: {
+      addressPrefixes: [
+        '172.17.0.0/16'
+      ]
+    }
+    bgpProperties: {
+      asn: 65511
+      bgpPeeringAddress: wthcsrnic2.properties.ipConfigurations[0].properties.privateIPAddress
+    }
+    ipAddress: wthcsrpip02.properties.ipAddress
+  }
+}
+
+resource vpngateways 'Microsoft.Network/vpnGateways@2022-05-01' = {
+  name: 'wth-vngw-hub${location}01'
   location: location
   properties: {
     bgpSettings: {
@@ -126,6 +128,33 @@ resource vpngateways 'Microsoft.Network/vpnGateways@2021-03-01' = {
   }
 }
 
+resource vpngateways2 'Microsoft.Network/vpnGateways@2022-05-01' = {
+  name: 'wth-vngw-hub${locationSecondary}01'
+  location: locationSecondary
+  properties: {
+    bgpSettings: {
+      asn: 65515
+    }
+    virtualHub: {
+      id: virtualhub2.id
+    }
+    connections: [
+      {
+        name: 'wth-cxn-hub01'
+        properties: {
+          enableBgp: true
+          connectionBandwidth: 1
+          remoteVpnSite: {
+            id: vpnsites2.id
+          }
+          sharedKey: '123mysecretkey'
+
+        }
+      }
+    ]
+  }
+}
+
 output vpngatewaysasn int = vpngateways.properties.bgpSettings.asn
 output vpngatewaysprivateip1 string = vpngateways.properties.bgpSettings.bgpPeeringAddresses[0].tunnelIpAddresses[1]
 output vpngatewaysprivateip2 string = vpngateways.properties.bgpSettings.bgpPeeringAddresses[1].tunnelIpAddresses[1]
@@ -133,6 +162,14 @@ output pipgw1 string = vpngateways.properties.bgpSettings.bgpPeeringAddresses[0]
 output pipgw2 string = vpngateways.properties.bgpSettings.bgpPeeringAddresses[1].tunnelIpAddresses[0]
 output wthhubvnetgwBGPip1 string = vpngateways.properties.bgpSettings.bgpPeeringAddresses[0].defaultBgpIpAddresses[0]
 output wthhubvnetgwBGPip2 string = vpngateways.properties.bgpSettings.bgpPeeringAddresses[1].defaultBgpIpAddresses[0]
+
+output vpngatewaysasn2 int = vpngateways2.properties.bgpSettings.asn
+output vpngatewaysprivateip12 string = vpngateways2.properties.bgpSettings.bgpPeeringAddresses[0].tunnelIpAddresses[1]
+output vpngatewaysprivateip22 string = vpngateways2.properties.bgpSettings.bgpPeeringAddresses[1].tunnelIpAddresses[1]
+output pipgw12 string = vpngateways2.properties.bgpSettings.bgpPeeringAddresses[0].tunnelIpAddresses[0]
+output pipgw22 string = vpngateways2.properties.bgpSettings.bgpPeeringAddresses[1].tunnelIpAddresses[0]
+output wthhubvnetgwBGPip12 string = vpngateways2.properties.bgpSettings.bgpPeeringAddresses[0].defaultBgpIpAddresses[0]
+output wthhubvnetgwBGPip22 string = vpngateways2.properties.bgpSettings.bgpPeeringAddresses[1].defaultBgpIpAddresses[0]
 
 /*
 resource changerdpport 'Microsoft.Compute/virtualMachines/extensions@2022-03-01' = {

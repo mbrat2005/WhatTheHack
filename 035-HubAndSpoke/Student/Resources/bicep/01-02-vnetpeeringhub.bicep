@@ -1,5 +1,12 @@
+param location string = 'eastus2'
+param locationSecondary string = 'westus3'
+
 resource virtualhub 'Microsoft.Network/virtualHubs@2022-05-01' existing = {
-  name: 'wth-vhub-hub01'
+  name: 'wth-vhub-hub${location}01'
+}  
+
+resource virtualhub2 'Microsoft.Network/virtualHubs@2022-05-01' existing = {
+  name: 'wth-vhub-hub${locationSecondary}01'
 }  
 
 resource spoke1vnet 'Microsoft.Network/virtualNetworks@2022-01-01' existing = {
@@ -13,7 +20,7 @@ resource spoke2vnet 'Microsoft.Network/virtualNetworks@2022-01-01' existing = {
 }
 
 resource hubvirtualnetworkconnections1 'Microsoft.Network/virtualHubs/hubVirtualNetworkConnections@2022-05-01' = {
-  name: 'wth-vnetcsn-spoke101'
+  name: 'wth-vnetcxn-spoke101'
   parent: virtualhub
   properties: {
     remoteVirtualNetwork: {
