@@ -103,7 +103,7 @@ resource rtonpremvms 'Microsoft.Network/routeTables@2022-01-01' = {
         name: 'route-onprem'
         properties: {
           addressPrefix: '172.16.0.0/16'
-          nextHopIpAddress: '172.16.0.4'
+          nextHopIpAddress: '172.17.0.4'
           nextHopType: 'VirtualAppliance'
         }
       }
