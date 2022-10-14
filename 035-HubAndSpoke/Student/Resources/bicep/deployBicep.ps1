@@ -237,7 +237,6 @@ switch ($challengeNumber) {
         $jobs = @()
         $jobs += New-AzResourceGroupDeployment -ResourceGroupName 'wth-rg-spoke1' -TemplateFile ./02-01-spoke1.bicep -TemplateParameterObject @{location = $location } -AsJob
         $jobs += New-AzResourceGroupDeployment -ResourceGroupName 'wth-rg-spoke2' -TemplateFile ./02-01-spoke2.bicep -TemplateParameterObject @{location = $location } -AsJob
-        $jobs += New-AzResourceGroupDeployment -ResourceGroupName 'wth-rg-hub' -TemplateFile ./02-01-hub.bicep -TemplateParameterObject @{location = $location } -AsJob
         $jobs += New-AzResourceGroupDeployment -ResourceGroupName 'wth-rg-onprem' -TemplateFile ./02-01-onprem.bicep -TemplateParameterObject @{location = $location } -AsJob
 
         $jobs | Wait-Job | Out-Null

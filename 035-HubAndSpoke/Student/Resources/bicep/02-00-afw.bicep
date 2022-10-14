@@ -1,15 +1,7 @@
 param location string = 'eastus2'
 
-resource hubvnet 'Microsoft.Network/virtualNetworks@2022-01-01' existing = {
-  name: 'wth-vnet-hub01'
-  scope: resourceGroup('wth-rg-hub')
-}
-
-resource afwsubnet 'Microsoft.Network/virtualNetworks/subnets@2022-01-01' = {
-  name: '${hubvnet.name}/AzureFirewallSubnet'
-  properties: {
-    addressPrefix: '10.0.1.0/24'
-  }
+resource virtualhub 'Microsoft.Network/virtualHubs@2022-05-01' existing = {
+  name: 'wth-vhub-hub${location}01'
 }
 
 resource wthafwpip01 'Microsoft.Network/publicIPAddresses@2022-01-01' = {
@@ -39,24 +31,19 @@ resource wthafw 'Microsoft.Network/azureFirewalls@2022-01-01' = {
   location: location
   properties: {
     sku: {
-      name: 'AZFW_VNet'
+      name: 'AZFW_Hub'
       tier: 'Standard'
     }
-    ipConfigurations: [
-      {
-        name: 'ipconfig1'
-        properties: {
-          subnet: {
-            id: afwsubnet.id
-          }
-          publicIPAddress: {
-            id: wthafwpip01.id
-          }
-        }
-      }
-    ]
+    virtualHub: {
+      id: virtualhub.id
+    }
     firewallPolicy: {
       id: wthafwpolicy.id
+    }
+    hubIPAddresses: {
+      publicIPs: {
+        count: 2 
+      }
     }
   }
 }
@@ -90,54 +77,3 @@ resource wthafwdiagsettings 'Microsoft.Insights/diagnosticSettings@2021-05-01-pr
   }
 }
 
-resource rthubvms 'Microsoft.Network/routeTables@2022-01-01' = {
-  name: 'wth-rt-hubvmssubnet'
-  location: location
-  properties: {
-    routes: [
-      {
-        name: 'route-all-to-afw'
-        properties: {
-          addressPrefix: '0.0.0.0/0'
-          nextHopType: 'VirtualAppliance'
-          nextHopIpAddress: wthafw.properties.ipConfigurations[0].properties.privateIPAddress
-        }
-      }
-    ]
-    disableBgpRoutePropagation: false
-  }
-}
-
-resource rtvnetgw 'Microsoft.Network/routeTables@2022-01-01' = {
-  name: 'wth-rt-hubgwsubnet'
-  location: location
-  properties: {
-    routes: [
-      {
-        name: 'route-spoke1-to-afw'
-        properties: {
-          addressPrefix: '10.1.0.0/16'
-          nextHopType: 'VirtualAppliance'
-          nextHopIpAddress: wthafw.properties.ipConfigurations[0].properties.privateIPAddress
-        }
-      }
-      {
-        name: 'route-spoke2-to-afw'
-        properties: {
-          addressPrefix: '10.2.0.0/16'
-          nextHopType: 'VirtualAppliance'
-          nextHopIpAddress: wthafw.properties.ipConfigurations[0].properties.privateIPAddress
-        }
-      }
-      {
-        name: 'route-hubvm-to-afw'
-        properties: {
-          addressPrefix: '10.0.10.0/24'
-          nextHopType: 'VirtualAppliance'
-          nextHopIpAddress: wthafw.properties.ipConfigurations[0].properties.privateIPAddress
-        }
-      }
-    ]
-    disableBgpRoutePropagation: false
-  }
-}
